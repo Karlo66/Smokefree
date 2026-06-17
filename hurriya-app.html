@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>حُرّية — تخلّص من التدخين بذكاء</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<!-- Firebase SDK (compat build — works with plain <script>, no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js" onerror="window.__fbLoadErr='تعذّر تحميل firebase-app-compat.js (لا يوجد اتصال بالإنترنت أو الرابط محظور)'"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js" onerror="window.__fbLoadErr='تعذّر تحميل firebase-auth-compat.js (لا يوجد اتصال بالإنترنت أو الرابط محظور)'"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js" onerror="window.__fbLoadErr='تعذّر تحميل firebase-firestore-compat.js (لا يوجد اتصال بالإنترنت أو الرابط محظور)'"></script>
+<style>
+:root {
+  --green:#1DB954; --green-dk:#158a3e; --green-lt:#e8f9f0;
+  --gold:#f5a623; --gold-lt:#fff8e6;
+  --dark:#0a1a10; --dark2:#12261a;
+  --gray:#6b7280; --gray-lt:#f1f5f2;
+  --white:#fff; --red:#ef4444; --red-lt:#fee2e2;
+  --blue:#3b82f6; --blue-lt:#eff6ff;
+  --radius:16px; --shadow:0 4px 24px rgba(0,0,0,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Cairo',sans-serif;background:var(--gray-lt);color:var(--dark);direction:rtl;min-height:100vh;}
+
+/* ─── SCREENS ─── */
+.screen{display:none;min-height:100vh;}
+.screen.active{display:flex;flex-direction:column;}
+
+/* ─── AUTH SCREEN ─── */
+#authScreen{background:linear-gradient(155deg,var(--dark) 0%,#1a3a25 55%,#0d2b1a 100%);align-items:center;justify-content:center;padding:24px;}
+.auth-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(16px);border-radius:24px;padding:40px 32px;width:100%;max-width:420px;}
+.auth-logo{text-align:center;margin-bottom:32px;}
+.auth-logo .leaf{font-size:3rem;animation:float 3s ease-in-out infinite;}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.auth-logo h1{font-size:2rem;font-weight:900;color:var(--white);margin-top:8px;}
+.auth-logo h1 span{color:var(--green);}
+.auth-logo p{color:rgba(255,255,255,.5);font-size:.85rem;margin-top:4px;}
+.auth-tabs{display:flex;background:rgba(255,255,255,.05);border-radius:12px;padding:4px;margin-bottom:28px;}
+.auth-tab{flex:1;text-align:center;padding:10px;border-radius:10px;cursor:pointer;color:rgba(255,255,255,.5);font-weight:700;font-size:.9rem;transition:.2s;}
+.auth-tab.active{background:var(--green);color:var(--white);}
+.inp-group{margin-bottom:16px;}
+.inp-group label{display:block;color:rgba(255,255,255,.7);font-size:.85rem;font-weight:600;margin-bottom:6px;}
+.inp-group input{width:100%;padding:13px 16px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.12);border-radius:12px;color:var(--white);font-family:'Cairo',sans-serif;font-size:.95rem;transition:.2s;direction:rtl;}
+.inp-group input::placeholder{color:rgba(255,255,255,.3);}
+.inp-group input:focus{outline:none;border-color:var(--green);background:rgba(29,185,84,.08);}
+.btn-auth{width:100%;padding:14px;background:var(--green);border:none;border-radius:12px;color:var(--white);font-family:'Cairo',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;transition:.2s;margin-top:8px;}
+.btn-auth:hover{background:var(--green-dk);transform:translateY(-1px);}
+.auth-divider{text-align:center;color:rgba(255,255,255,.3);font-size:.8rem;margin:16px 0;display:flex;align-items:center;gap:10px;}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.12);}
+.btn-google{width:100%;padding:13px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.15);border-radius:12px;color:var(--white);font-family:'Cairo',sans-serif;font-size:.92rem;font-weight:700;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:10px;}
+.btn-google:hover{background:rgba(255,255,255,.14);}
+.btn-google svg{width:18px;height:18px;}
+.btn-auth:disabled,.btn-google:disabled{opacity:.5;cursor:not-allowed;}
+.auth-spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--white);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.auth-loading-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--dark);color:rgba(255,255,255,.6);flex-direction:column;gap:14px;}
+.auth-loading-screen .auth-spinner{width:32px;height:32px;border-width:3px;}
+.sync-pill{position:fixed;top:64px;left:50%;transform:translateX(-50%);background:var(--dark);color:var(--white);font-size:.78rem;padding:6px 16px;border-radius:30px;z-index:200;display:none;align-items:center;gap:6px;box-shadow:0 4px 16px rgba(0,0,0,.2);}
+.sync-pill.show{display:flex;}
+.auth-err{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:10px 14px;color:#fca5a5;font-size:.85rem;margin-top:12px;display:none;}
+
+/* ─── MAIN APP ─── */
+#appScreen{background:var(--gray-lt);}
+
+/* NAV */
+.app-nav{background:var(--white);border-bottom:1px solid #e5e7eb;padding:0 20px;display:flex;justify-content:space-between;align-items:center;height:58px;position:sticky;top:0;z-index:100;box-shadow:0 1px 8px rgba(0,0,0,.04);}
+.nav-logo{font-size:1.2rem;font-weight:900;color:var(--green);}
+.nav-logo span{color:var(--dark);}
+.nav-user{display:flex;align-items:center;gap:10px;}
+.nav-user-name{font-size:.85rem;font-weight:700;color:var(--dark);}
+.btn-logout{background:none;border:1.5px solid #e5e7eb;border-radius:8px;padding:5px 12px;font-family:'Cairo',sans-serif;font-size:.8rem;color:var(--gray);cursor:pointer;transition:.2s;}
+.btn-logout:hover{border-color:var(--red);color:var(--red);}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid #e5e7eb;display:flex;z-index:100;box-shadow:0 -2px 12px rgba(0,0,0,.06);}
+.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px;cursor:pointer;color:var(--gray);transition:.2s;font-size:.7rem;font-weight:700;gap:3px;border:none;background:none;font-family:'Cairo',sans-serif;}
+.bn-item .bn-icon{font-size:1.3rem;}
+.bn-item.active{color:var(--green);}
+.bn-item.active .bn-icon{transform:scale(1.1);}
+
+/* CONTENT AREA */
+.app-content{padding:20px 16px 90px;max-width:700px;margin:0 auto;width:100%;}
+
+/* PAGES */
+.page{display:none;}
+.page.active{display:block;}
+
+/* ─── CARDS ─── */
+.card{background:var(--white);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);margin-bottom:16px;}
+.card-title{font-size:1.05rem;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+
+/* ─── ONBOARDING / SETUP ─── */
+.step-wizard{background:var(--white);border-radius:20px;box-shadow:var(--shadow);overflow:hidden;}
+.wizard-progress{height:4px;background:#e5e7eb;}
+.wizard-progress-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--gold));transition:width .4s;}
+.wizard-steps-wrap{position:relative;overflow:hidden;}
+.wizard-step{padding:28px;display:none;}
+.wizard-step.active{display:block;}
+.ws-title{font-size:1.2rem;font-weight:900;margin-bottom:6px;}
+.ws-sub{color:var(--gray);font-size:.9rem;margin-bottom:24px;line-height:1.7;}
+label.field-label{display:block;font-size:.88rem;font-weight:700;margin-bottom:6px;color:var(--dark);}
+.field-input{width:100%;padding:12px 14px;border:2px solid #e5e7eb;border-radius:12px;font-family:'Cairo',sans-serif;font-size:.95rem;color:var(--dark);background:var(--gray-lt);transition:.2s;direction:rtl;}
+.field-input:focus{outline:none;border-color:var(--green);background:var(--white);}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+@media(max-width:480px){.field-row{grid-template-columns:1fr;}}
+.field-unit{position:relative;}
+.choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.choice-btn{padding:14px 10px;border:2px solid #e5e7eb;border-radius:12px;background:var(--white);font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:.2s;text-align:center;}
+.choice-btn:hover{border-color:var(--green);}
+.choice-btn.selected{border-color:var(--green);background:var(--green-lt);color:var(--green-dk);}
+.choice-btn .c-icon{font-size:1.4rem;display:block;margin-bottom:4px;}
+.wizard-nav{display:flex;justify-content:space-between;align-items:center;padding:0 28px 24px;}
+.btn-wiz{padding:11px 28px;border-radius:40px;font-family:'Cairo',sans-serif;font-weight:700;font-size:.9rem;cursor:pointer;transition:.2s;border:none;}
+.btn-wiz.next{background:var(--green);color:var(--white);}
+.btn-wiz.back{background:var(--gray-lt);color:var(--gray);}
+.btn-wiz:hover{opacity:.9;transform:translateY(-1px);}
+.wizard-step-num{font-size:.85rem;color:var(--gray);font-weight:600;}
+
+/* ─── HERO TRACKER ─── */
+.hero-tracker{background:linear-gradient(135deg,var(--dark),#1a3a25);border-radius:20px;padding:28px;color:var(--white);text-align:center;margin-bottom:16px;}
+.ht-phase{display:inline-block;background:rgba(29,185,84,.2);border:1px solid rgba(29,185,84,.4);color:var(--green);padding:4px 14px;border-radius:20px;font-size:.8rem;font-weight:700;margin-bottom:12px;}
+.ht-days{font-size:4.5rem;font-weight:900;color:var(--green);line-height:1;}
+.ht-label{color:rgba(255,255,255,.6);font-size:.85rem;margin-top:4px;margin-bottom:20px;}
+.ht-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px;}
+.ht-metric{background:rgba(255,255,255,.07);border-radius:12px;padding:12px 8px;}
+.ht-metric-val{font-size:1.1rem;font-weight:900;color:var(--gold);}
+.ht-metric-lbl{font-size:.7rem;color:rgba(255,255,255,.55);margin-top:3px;}
+
+/* ─── GRADUAL PLAN ─── */
+.plan-container{position:relative;}
+.plan-week{border-right:3px solid var(--green-lt);margin-right:12px;padding-right:20px;margin-bottom:0;}
+.plan-week:last-child{border-right:3px solid transparent;}
+.plan-dot{width:20px;height:20px;border-radius:50%;background:var(--green-lt);border:3px solid var(--green);position:absolute;right:-12px;top:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;}
+.plan-dot.done{background:var(--green);}
+.plan-dot.current{background:var(--green);box-shadow:0 0 0 4px rgba(29,185,84,.2);animation:pulse-dot 1.5s infinite;}
+@keyframes pulse-dot{0%,100%{box-shadow:0 0 0 4px rgba(29,185,84,.2)}50%{box-shadow:0 0 0 8px rgba(29,185,84,.1)}}
+.plan-week-card{background:var(--white);border:2px solid #e5e7eb;border-radius:14px;padding:16px;margin-bottom:12px;margin-right:16px;transition:.2s;position:relative;}
+.plan-week-card.current-week{border-color:var(--green);background:var(--green-lt);}
+.plan-week-card.done-week{border-color:#d1fae5;background:#f0fdf4;}
+.pwc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.pwc-title{font-weight:800;font-size:.95rem;}
+.pwc-badge{font-size:.75rem;font-weight:700;padding:3px 10px;border-radius:20px;}
+.pwc-badge.done{background:#d1fae5;color:#065f46;}
+.pwc-badge.current{background:var(--green);color:var(--white);}
+.pwc-badge.future{background:#f3f4f6;color:var(--gray);}
+.pwc-cigs{font-size:1.6rem;font-weight:900;color:var(--green);}
+.pwc-cigs span{font-size:.85rem;font-weight:600;color:var(--gray);}
+.pwc-tip{font-size:.82rem;color:var(--gray);margin-top:6px;line-height:1.6;}
+.daily-log{margin-top:12px;}
+.daily-log-title{font-size:.82rem;font-weight:700;margin-bottom:8px;color:var(--dark);}
+.cig-counter{display:flex;align-items:center;gap:12px;background:var(--gray-lt);border-radius:12px;padding:10px 14px;}
+.cig-counter-btn{width:36px;height:36px;border-radius:50%;border:none;background:var(--white);box-shadow:0 2px 8px rgba(0,0,0,.1);font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s;font-family:'Cairo',sans-serif;}
+.cig-counter-btn:hover{background:var(--green);color:var(--white);}
+.cig-count-num{font-size:1.5rem;font-weight:900;flex:1;text-align:center;color:var(--dark);}
+.cig-count-label{font-size:.75rem;color:var(--gray);text-align:center;}
+.log-btn{width:100%;margin-top:10px;padding:11px;background:var(--green);color:var(--white);border:none;border-radius:12px;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:.2s;}
+.log-btn:hover{background:var(--green-dk);}
+
+/* HISTORY CHART */
+.mini-chart{display:flex;align-items:flex-end;gap:6px;height:80px;padding:8px 0;}
+.chart-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.chart-bar{width:100%;border-radius:6px 6px 0 0;background:var(--green-lt);transition:height .4s;min-height:4px;}
+.chart-bar.over-limit{background:#fed7aa;}
+.chart-bar.on-target{background:var(--green);}
+.chart-day{font-size:.65rem;color:var(--gray);}
+
+/* ─── ACHIEVEMENTS ─── */
+.badges-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;}
+.badge{background:var(--white);border:2px solid #e5e7eb;border-radius:14px;padding:18px 10px;text-align:center;transition:.2s;}
+.badge.earned{border-color:var(--gold);background:var(--gold-lt);}
+.badge .b-icon{font-size:2rem;margin-bottom:6px;}
+.badge .b-name{font-size:.82rem;font-weight:800;}
+.badge .b-desc{font-size:.7rem;color:var(--gray);margin-top:3px;}
+.badge:not(.earned){opacity:.45;filter:grayscale(.8);}
+
+/* ─── AI COACH ─── */
+.coach-chat{display:flex;flex-direction:column;gap:12px;}
+.chat-bubble{max-width:85%;padding:14px 16px;border-radius:16px;font-size:.9rem;line-height:1.8;}
+.chat-bubble.ai{background:var(--green-lt);border-bottom-right-radius:4px;align-self:flex-end;}
+.chat-bubble.user{background:var(--blue-lt);border-bottom-left-radius:4px;align-self:flex-start;}
+.chat-input-row{display:flex;gap:8px;margin-top:8px;}
+.chat-input-row input{flex:1;padding:12px 14px;border:2px solid #e5e7eb;border-radius:12px;font-family:'Cairo',sans-serif;font-size:.9rem;direction:rtl;}
+.chat-input-row input:focus{outline:none;border-color:var(--green);}
+.chat-send-btn{padding:12px 16px;background:var(--green);border:none;border-radius:12px;color:var(--white);font-size:1rem;cursor:pointer;}
+.typing-ind{display:flex;gap:5px;align-items:center;padding:14px 16px;background:var(--green-lt);border-radius:16px;border-bottom-right-radius:4px;align-self:flex-end;width:fit-content;}
+.typing-ind span{width:8px;height:8px;background:var(--green);border-radius:50%;animation:typing-bounce .8s infinite;}
+.typing-ind span:nth-child(2){animation-delay:.15s;}
+.typing-ind span:nth-child(3){animation-delay:.3s;}
+@keyframes typing-bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+
+/* ─── CRAVING SOS ─── */
+.sos-card{background:linear-gradient(135deg,#7f1d1d,#991b1b);border-radius:20px;padding:24px;color:var(--white);text-align:center;margin-bottom:16px;}
+.sos-btn{background:var(--red);color:var(--white);border:none;padding:16px 32px;border-radius:40px;font-family:'Cairo',sans-serif;font-size:1rem;font-weight:900;cursor:pointer;box-shadow:0 4px 20px rgba(239,68,68,.5);transition:.2s;animation:sos-pulse 2s infinite;}
+@keyframes sos-pulse{0%,100%{box-shadow:0 4px 20px rgba(239,68,68,.5)}50%{box-shadow:0 4px 40px rgba(239,68,68,.8)}}
+.sos-btn:hover{transform:scale(1.04);}
+.craving-timer-wrap{display:none;margin-top:20px;}
+.craving-ring{width:120px;height:120px;margin:0 auto 16px;position:relative;}
+.craving-ring svg{transform:rotate(-90deg);}
+.craving-ring .ring-bg{fill:none;stroke:rgba(255,255,255,.15);stroke-width:8;}
+.craving-ring .ring-prog{fill:none;stroke:var(--green);stroke-width:8;stroke-linecap:round;stroke-dasharray:314;transition:stroke-dashoffset .9s linear;}
+.craving-ring .ring-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;}
+.sos-tips{text-align:right;display:grid;gap:10px;margin-top:16px;}
+.sos-tip{background:rgba(255,255,255,.08);border-radius:12px;padding:12px 14px;display:flex;gap:10px;font-size:.88rem;line-height:1.7;align-items:flex-start;}
+.sos-tip .tip-ico{font-size:1.2rem;flex-shrink:0;}
+.breathing-box{background:rgba(255,255,255,.05);border-radius:14px;padding:18px;margin-top:12px;text-align:center;}
+.breath-circle{width:80px;height:80px;border-radius:50%;background:rgba(29,185,84,.3);border:3px solid var(--green);margin:12px auto;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;transition:transform 4s ease;}
+.breath-circle.inhale{transform:scale(1.5);}
+.breath-circle.exhale{transform:scale(1);}
+.breath-label{font-size:.85rem;color:rgba(255,255,255,.7);margin-top:8px;}
+
+/* ─── STATS PAGE ─── */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.stat-card{background:var(--white);border-radius:14px;padding:18px;box-shadow:var(--shadow);}
+.stat-card .sc-val{font-size:1.6rem;font-weight:900;}
+.stat-card .sc-lbl{font-size:.78rem;color:var(--gray);margin-top:4px;}
+.stat-card.green .sc-val{color:var(--green);}
+.stat-card.gold .sc-val{color:var(--gold);}
+.stat-card.blue .sc-val{color:var(--blue);}
+.stat-card.red .sc-val{color:var(--red);}
+
+/* HEALTH TIMELINE */
+.health-items{display:grid;gap:10px;}
+.health-item{display:flex;gap:14px;align-items:flex-start;padding:14px;background:var(--white);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.hi-icon{font-size:1.5rem;flex-shrink:0;margin-top:2px;}
+.hi-title{font-size:.9rem;font-weight:700;}
+.hi-desc{font-size:.8rem;color:var(--gray);margin-top:3px;line-height:1.6;}
+.hi-status{font-size:.75rem;font-weight:700;margin-top:4px;}
+.hi-status.achieved{color:var(--green);}
+.hi-status.pending{color:var(--gray);}
+
+/* MISC */
+.section-title{font-size:1rem;font-weight:900;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:700;}
+.pill.green{background:var(--green-lt);color:var(--green-dk);}
+.pill.gold{background:var(--gold-lt);color:#92400e;}
+.empty-state{text-align:center;padding:40px 20px;color:var(--gray);}
+.empty-state .e-icon{font-size:3rem;margin-bottom:12px;}
+.empty-state p{font-size:.9rem;line-height:1.7;}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ INITIAL LOADING SCREEN ══════════════ -->
+<div id="loadingScreen" class="auth-loading-screen">
+  <div class="auth-spinner" id="loadingSpinner"></div>
+  <div id="loadingText">جاري الاتصال بحُرّية...</div>
+  <div id="loadingErrBox" style="display:none;max-width:320px;text-align:center;color:#fca5a5;font-size:.85rem;line-height:1.8;padding:0 20px;"></div>
+</div>
+
+<!-- Sync indicator pill -->
+<div class="sync-pill" id="syncPill">☁️ <span id="syncPillText">جاري الحفظ...</span></div>
+
+<!-- ══════════════ AUTH SCREEN ══════════════ -->
+<div id="authScreen" class="screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="leaf">🌿</div>
+      <h1>حُرّ<span>ية</span></h1>
+      <p>رحلتك نحو حياة بدون دخان تبدأ هنا</p>
+    </div>
+
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuthTab('login')">تسجيل الدخول</div>
+      <div class="auth-tab" onclick="switchAuthTab('register')">حساب جديد</div>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="loginForm">
+      <div class="inp-group">
+        <label>البريد الإلكتروني</label>
+        <input type="email" id="loginUser" placeholder="example@email.com" autocomplete="email">
+      </div>
+      <div class="inp-group">
+        <label>كلمة المرور</label>
+        <input type="password" id="loginPass" placeholder="كلمة المرور" autocomplete="current-password">
+      </div>
+      <button class="btn-auth" id="loginBtn" onclick="doLogin()">دخول ✨</button>
+      <div class="auth-divider">أو</div>
+      <button class="btn-google" id="googleLoginBtn" onclick="doGoogleAuth()">
+        <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 16 18.9 13 24 13c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.8 14-4.9l-6.5-5.4C29.6 35.6 27 36.5 24 36.5c-5.3 0-9.7-3.4-11.3-8L6 33.5C9.4 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.5 5.4C41.5 36 44 30.6 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+        الدخول بحساب Google
+      </button>
+      <div class="auth-err" id="loginErr"></div>
+      <div style="text-align:center;margin-top:14px;">
+        <span style="color:rgba(255,255,255,.4);font-size:.82rem;cursor:pointer;text-decoration:underline;" onclick="doForgotPassword()">نسيت كلمة المرور؟</span>
+      </div>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="registerForm" style="display:none">
+      <div class="inp-group">
+        <label>الاسم الكامل</label>
+        <input type="text" id="regName" placeholder="اسمك" autocomplete="name">
+      </div>
+      <div class="inp-group">
+        <label>البريد الإلكتروني</label>
+        <input type="email" id="regUser" placeholder="example@email.com" autocomplete="email">
+      </div>
+      <div class="inp-group">
+        <label>كلمة المرور</label>
+        <input type="password" id="regPass" placeholder="6 أحرف على الأقل" autocomplete="new-password">
+      </div>
+      <button class="btn-auth" id="regBtn" onclick="doRegister()">إنشاء الحساب 🚀</button>
+      <div class="auth-divider">أو</div>
+      <button class="btn-google" id="googleRegBtn" onclick="doGoogleAuth()">
+        <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 16 18.9 13 24 13c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.8 14-4.9l-6.5-5.4C29.6 35.6 27 36.5 24 36.5c-5.3 0-9.7-3.4-11.3-8L6 33.5C9.4 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.5 5.4C41.5 36 44 30.6 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+        التسجيل بحساب Google
+      </button>
+      <div class="auth-err" id="regErr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ APP SCREEN ══════════════ -->
+<div id="appScreen" class="screen">
+
+  <!-- TOP NAV -->
+  <nav class="app-nav">
+    <div class="nav-logo">حُرّ<span>ية 🌿</span></div>
+    <div class="nav-user">
+      <span class="nav-user-name" id="navUserName"></span>
+      <button class="btn-logout" onclick="doLogout()">خروج</button>
+    </div>
+  </nav>
+
+  <!-- CONTENT -->
+  <div class="app-content">
+
+    <!-- ── PAGE: HOME ── -->
+    <div class="page active" id="pageHome">
+
+      <!-- Setup Wizard (shown once) -->
+      <div id="wizardWrap">
+        <div class="step-wizard">
+          <div class="wizard-progress">
+            <div class="wizard-progress-fill" id="wizProg" style="width:20%"></div>
+          </div>
+          <div class="wizard-steps-wrap">
+
+            <!-- STEP 1 -->
+            <div class="wizard-step active" id="ws1">
+              <div class="ws-title">👋 أهلاً! لنبدأ رحلتك</div>
+              <div class="ws-sub">كم تدخن حالياً؟ هذا يساعدنا في بناء خطة تناسبك.</div>
+              <div class="field-row">
+                <div>
+                  <label class="field-label">سجائر في اليوم 🚬</label>
+                  <input class="field-input" type="number" id="w_cpd" placeholder="مثال: 20" min="1">
+                </div>
+                <div>
+                  <label class="field-label">سنوات التدخين</label>
+                  <input class="field-input" type="number" id="w_years" placeholder="مثال: 5" min="0">
+                </div>
+              </div>
+              <label class="field-label">نوع السيجارة</label>
+              <div class="choice-grid">
+                <button class="choice-btn" onclick="selectChoice(this,'cigType','regular')"><span class="c-icon">🚬</span>عادية</button>
+                <button class="choice-btn" onclick="selectChoice(this,'cigType','light')"><span class="c-icon">💨</span>خفيفة</button>
+                <button class="choice-btn" onclick="selectChoice(this,'cigType','vape')"><span class="c-icon">🌫️</span>فيب</button>
+                <button class="choice-btn" onclick="selectChoice(this,'cigType','shisha')"><span class="c-icon">🪔</span>شيشة</button>
+              </div>
+            </div>
+
+            <!-- STEP 2 -->
+            <div class="wizard-step" id="ws2">
+              <div class="ws-title">💰 التكلفة اليومية</div>
+              <div class="ws-sub">نحسب لك كم ستوفر كل يوم.</div>
+              <div class="field-row">
+                <div>
+                  <label class="field-label">سعر العلبة</label>
+                  <input class="field-input" type="number" id="w_price" placeholder="5.00" step="0.1">
+                </div>
+                <div>
+                  <label class="field-label">عدد في العلبة</label>
+                  <select class="field-input" id="w_cip">
+                    <option value="20">20 سيجارة</option>
+                    <option value="25">25 سيجارة</option>
+                    <option value="10">10 سجائر</option>
+                  </select>
+                </div>
+              </div>
+              <div class="card" style="background:var(--green-lt);border:none;padding:14px 16px;">
+                <div style="font-size:.85rem;color:var(--green-dk);">💡 ستوفر تقريباً: <strong id="dailySave">0</strong> يومياً و <strong id="yearlySave">0</strong> سنوياً</div>
+              </div>
+            </div>
+
+            <!-- STEP 3 -->
+            <div class="wizard-step" id="ws3">
+              <div class="ws-title">🎯 طريقة الإقلاع</div>
+              <div class="ws-sub">الأبحاث تُثبت أن التقليل التدريجي أكثر نجاحاً من التوقف المفاجئ — اختر وتيرتك.</div>
+              <div style="display:grid;gap:10px;margin-bottom:16px;">
+                <button class="choice-btn" style="text-align:right;padding:16px" onclick="selectChoice(this,'method','gradual4')">
+                  <div style="font-weight:800;">🐢 تدريجي بطيء — 8 أسابيع</div>
+                  <div style="font-size:.8rem;color:var(--gray);margin-top:4px;">تقليل 25% كل أسبوعين — للمدخنين الشرهين</div>
+                </button>
+                <button class="choice-btn" style="text-align:right;padding:16px" onclick="selectChoice(this,'method','gradual2')">
+                  <div style="font-weight:800;">🚶 تدريجي متوسط — 4 أسابيع</div>
+                  <div style="font-size:.8rem;color:var(--gray);margin-top:4px;">تقليل 50% كل أسبوع — الخيار الموصى به</div>
+                </button>
+                <button class="choice-btn" style="text-align:right;padding:16px" onclick="selectChoice(this,'method','fast')">
+                  <div style="font-weight:800;">⚡ سريع — أسبوعان</div>
+                  <div style="font-size:.8rem;color:var(--gray);margin-top:4px;">تقليل حاد — يحتاج إرادة قوية</div>
+                </button>
+                <button class="choice-btn" style="text-align:right;padding:16px" onclick="selectChoice(this,'method','cold')">
+                  <div style="font-weight:800;">🔥 توقف فوري</div>
+                  <div style="font-size:.8rem;color:var(--gray);margin-top:4px;">لمن يريد التوقف الآن مباشرة</div>
+                </button>
+              </div>
+            </div>
+
+            <!-- STEP 4 -->
+            <div class="wizard-step" id="ws4">
+              <div class="ws-title">💪 دوافعك الشخصية</div>
+              <div class="ws-sub">اختر أسبابك — سيُذكّرك بها المساعد الذكي وقت الإغراء.</div>
+              <div style="display:grid;gap:8px;" id="motivationList">
+                <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--gray-lt);border-radius:12px;cursor:pointer;border:2px solid transparent;" id="m1">
+                  <input type="checkbox" value="health" style="accent-color:var(--green);width:18px;height:18px;"> <span>❤️ صحة أفضل وعمر أطول</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--gray-lt);border-radius:12px;cursor:pointer;border:2px solid transparent;" id="m2">
+                  <input type="checkbox" value="money" style="accent-color:var(--green);width:18px;height:18px;"> <span>💸 توفير المال</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--gray-lt);border-radius:12px;cursor:pointer;border:2px solid transparent;" id="m3">
+                  <input type="checkbox" value="family" style="accent-color:var(--green);width:18px;height:18px;"> <span>👨‍👩‍👧 حماية عائلتي</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--gray-lt);border-radius:12px;cursor:pointer;border:2px solid transparent;" id="m4">
+                  <input type="checkbox" value="sport" style="accent-color:var(--green);width:18px;height:18px;"> <span>🏃 ممارسة الرياضة</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--gray-lt);border-radius:12px;cursor:pointer;border:2px solid transparent;" id="m5">
+                  <input type="checkbox" value="religion" style="accent-color:var(--green);width:18px;height:18px;"> <span>🕌 الالتزام الديني</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--gray-lt);border-radius:12px;cursor:pointer;border:2px solid transparent;" id="m6">
+                  <input type="checkbox" value="freedom" style="accent-color:var(--green);width:18px;height:18px;"> <span>🦅 التحرر من الإدمان</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- STEP 5 -->
+            <div class="wizard-step" id="ws5">
+              <div class="ws-title">🚀 خطتك جاهزة!</div>
+              <div class="ws-sub">ملخص رحلتك نحو التحرر الكامل:</div>
+              <div id="planSummary" style="display:grid;gap:12px;"></div>
+            </div>
+          </div>
+          <div class="wizard-nav">
+            <button class="btn-wiz back" id="wizBackBtn" onclick="wizBack()" style="display:none">◀ رجوع</button>
+            <span class="wizard-step-num" id="wizStepNum">خطوة 1 / 5</span>
+            <button class="btn-wiz next" id="wizNextBtn" onclick="wizNext()">التالي ▶</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- DASHBOARD (shown after setup) -->
+      <div id="dashboardWrap" style="display:none;">
+
+        <!-- Hero Tracker -->
+        <div class="hero-tracker" id="heroTracker">
+          <div class="ht-phase" id="htPhase">المرحلة الأولى</div>
+          <div class="ht-days" id="htDays">0</div>
+          <div class="ht-label">يوم في الرحلة 🎉</div>
+          <div class="ht-metrics">
+            <div class="ht-metric"><div class="ht-metric-val" id="htSaved">0</div><div class="ht-metric-lbl">💵 موفّر</div></div>
+            <div class="ht-metric"><div class="ht-metric-val" id="htAvoided">0</div><div class="ht-metric-lbl">🚬 تجنّبتها</div></div>
+            <div class="ht-metric"><div class="ht-metric-val" id="htHours">0</div><div class="ht-metric-lbl">⏱ ساعات</div></div>
+          </div>
+        </div>
+
+        <!-- Today's Log -->
+        <div class="card">
+          <div class="card-title">📋 تسجيل اليوم</div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <div style="font-size:.85rem;color:var(--gray);">الهدف اليوم</div>
+            <div style="font-size:.85rem;font-weight:800;" id="todayGoalBadge">— سيجارة</div>
+          </div>
+          <div class="cig-counter">
+            <button class="cig-counter-btn" onclick="adjustCig(-1)">−</button>
+            <div>
+              <div class="cig-count-num" id="todayCigNum">0</div>
+              <div class="cig-count-label">سيجارة اليوم</div>
+            </div>
+            <button class="cig-counter-btn" onclick="adjustCig(1)">+</button>
+          </div>
+          <div id="todayStatus" style="font-size:.82rem;margin-top:8px;text-align:center;min-height:20px;"></div>
+          <button class="log-btn" onclick="logToday()">✅ حفظ التسجيل</button>
+        </div>
+
+        <!-- Weekly chart -->
+        <div class="card">
+          <div class="card-title">📊 آخر 7 أيام</div>
+          <div class="mini-chart" id="weekChart"></div>
+        </div>
+
+        <!-- Quick SOS -->
+        <div style="background:var(--red-lt);border-radius:16px;padding:16px;text-align:center;margin-bottom:16px;">
+          <div style="font-weight:800;margin-bottom:6px;">🆘 تشتهي سيجارة الآن؟</div>
+          <div style="font-size:.82rem;color:var(--gray);margin-bottom:12px;">الرغبة تدوم 3-5 دقائق فقط. اضغط وسنساعدك.</div>
+          <button onclick="goToSOS()" style="background:var(--red);color:var(--white);border:none;padding:10px 24px;border-radius:30px;font-family:'Cairo',sans-serif;font-weight:700;font-size:.9rem;cursor:pointer;">ساعدني الآن 🔴</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── PAGE: PLAN ── -->
+    <div class="page" id="pagePlan">
+      <div class="section-title">🗓 خطة التقليل التدريجي</div>
+      <div class="card" style="background:var(--green-lt);border:none;padding:16px;">
+        <div style="font-size:.85rem;color:var(--green-dk);line-height:1.7;">
+          💡 <strong>لماذا التقليل التدريجي؟</strong><br>
+          الدراسات تُثبت أن 70% ممن يتوقفون فجأة يعودون خلال أسبوع، بينما التقليل التدريجي يرفع نسبة النجاح إلى 60%+. جسمك يتكيّف ببطء وأعراض الانسحاب تكون أخف بكثير.
+        </div>
+      </div>
+      <div style="margin-top:16px;" id="planTimeline"></div>
+    </div>
+
+    <!-- ── PAGE: COACH ── -->
+    <div class="page" id="pageCoach">
+      <div class="section-title">🤖 مدربك الذكي</div>
+      <div class="card">
+        <div class="coach-chat" id="chatMessages">
+          <div class="chat-bubble ai">مرحباً! 👋 أنا مدربك الذكي في رحلة الإقلاع عن التدخين. اسألني أي شيء — عن أعراض الانسحاب، كيف تتعامل مع الإغراء، أو فقط أخبرني كيف حالك اليوم!</div>
+        </div>
+        <div class="chat-input-row" style="margin-top:16px;">
+          <input id="chatInput" placeholder="اكتب سؤالك هنا..." onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="chat-send-btn" onclick="sendChat()">➤</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+          <button onclick="quickChat('كيف أتعامل مع الرغبة الشديدة؟')" style="background:var(--green-lt);border:none;border-radius:20px;padding:6px 12px;font-family:'Cairo',sans-serif;font-size:.78rem;cursor:pointer;color:var(--green-dk);font-weight:600;">رغبة شديدة</button>
+          <button onclick="quickChat('ما أعراض الانسحاب وكيف أتعاملها؟')" style="background:var(--green-lt);border:none;border-radius:20px;padding:6px 12px;font-family:'Cairo',sans-serif;font-size:.78rem;cursor:pointer;color:var(--green-dk);font-weight:600;">أعراض الانسحاب</button>
+          <button onclick="quickChat('شجّعني اليوم!')" style="background:var(--gold-lt);border:none;border-radius:20px;padding:6px 12px;font-family:'Cairo',sans-serif;font-size:.78rem;cursor:pointer;color:#92400e;font-weight:600;">شجّعني!</button>
+          <button onclick="quickChat('ماذا أفعل إذا أخفقت وعدت للتدخين؟')" style="background:var(--blue-lt);border:none;border-radius:20px;padding:6px 12px;font-family:'Cairo',sans-serif;font-size:.78rem;cursor:pointer;color:#1e40af;font-weight:600;">إذا تراجعت</button>
+        </div>
+      </div>
+
+      <!-- SOS Section -->
+      <div class="sos-card" id="sosCard">
+        <div style="font-size:1.1rem;font-weight:900;margin-bottom:6px;">🆘 وضع الطوارئ</div>
+        <div style="font-size:.85rem;opacity:.7;margin-bottom:16px;">اضغط لمساعدة فورية لمقاومة الإغراء</div>
+        <button class="sos-btn" onclick="startCravingTimer()">أشتهي سيجارة — ساعدني!</button>
+        <div class="craving-timer-wrap" id="cravingTimerWrap">
+          <div class="craving-ring">
+            <svg width="120" height="120" viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="50"/>
+              <circle class="ring-prog" id="ringProg" cx="60" cy="60" r="50" stroke-dashoffset="0"/>
+            </svg>
+            <div class="ring-text" id="ringText">5:00</div>
+          </div>
+          <div style="font-size:.9rem;opacity:.8;margin-bottom:16px;">الرغبة ستزول قبل انتهاء العداد 💪</div>
+          <div class="sos-tips">
+            <div class="sos-tip"><span class="tip-ico">💧</span><span>اشرب كوب ماء بارد ببطء — يهدئ جهازك العصبي</span></div>
+            <div class="sos-tip"><span class="tip-ico">🚶</span><span>غيّر مكانك فوراً — المكان يُفعّل الذاكرة المرتبطة بالتدخين</span></div>
+            <div class="sos-tip"><span class="tip-ico">🍬</span><span>ضع علكة أو قضم شيء — يُشبع الحاجة الفموية</span></div>
+            <div class="sos-tip"><span class="tip-ico">📱</span><span>انظر لرصيد مدخراتك — هل يستحق العودة لنقطة الصفر؟</span></div>
+          </div>
+          <div class="breathing-box">
+            <div style="font-size:.85rem;font-weight:700;margin-bottom:4px;">🫁 تمرين التنفس</div>
+            <div class="breath-circle" id="breathCircle">شهيق</div>
+            <div class="breath-label" id="breathLabel">شهيق ببطء 4 ثوانٍ...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PAGE: STATS ── -->
+    <div class="page" id="pageStats">
+      <div class="section-title">📊 إحصاءاتك</div>
+      <div class="stat-grid">
+        <div class="stat-card green"><div class="sc-val" id="st_days">0</div><div class="sc-lbl">📅 يوم في الرحلة</div></div>
+        <div class="stat-card gold"><div class="sc-val" id="st_money">0</div><div class="sc-lbl">💰 دينار وفّرته</div></div>
+        <div class="stat-card blue"><div class="sc-val" id="st_avoided">0</div><div class="sc-lbl">🚬 سيجارة تجنّبتها</div></div>
+        <div class="stat-card red"><div class="sc-val" id="st_hours">0</div><div class="sc-lbl">⏱ ساعة استرجعتها</div></div>
+      </div>
+
+      <!-- Achievements -->
+      <div class="section-title">🏆 الإنجازات</div>
+      <div class="badges-grid" id="badgesGrid"></div>
+
+      <!-- Health timeline -->
+      <div class="section-title" style="margin-top:20px;">❤️ مؤشرات صحتك</div>
+      <div class="health-items" id="healthItems"></div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="bn-item active" id="bn_home" onclick="goPage('home')"><span class="bn-icon">🏠</span>الرئيسية</button>
+    <button class="bn-item" id="bn_plan" onclick="goPage('plan')"><span class="bn-icon">🗓</span>الخطة</button>
+    <button class="bn-item" id="bn_coach" onclick="goPage('coach')"><span class="bn-icon">🤖</span>المدرب</button>
+    <button class="bn-item" id="bn_stats" onclick="goPage('stats')"><span class="bn-icon">📊</span>إحصاءات</button>
+  </div>
+
+</div>
+
+<script>
+/* ══════════════════════════════════
+   FIREBASE INITIALIZATION
+══════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyAGz1-6sm7dWcHji6sioyAAMNfzgUH8F3g",
+  authDomain: "shaton-7f265.firebaseapp.com",
+  projectId: "shaton-7f265",
+  storageBucket: "shaton-7f265.firebasestorage.app",
+  messagingSenderId: "311972454882",
+  appId: "1:311972454882:web:2d6860a8c170c82f6899bb"
+};
+
+let auth, db;
+let currentUser = null;       // { uid, name, email }
+let profileCache = null;      // cached Firestore profile doc for the session
+let firestoreUnsub = null;    // live-listener unsubscribe function
+let saveDebounce = null;      // debounce timer for writes
+
+/* Shows a hard, visible failure on the loading screen instead of freezing silently.
+   This is the difference between "stuck spinner with no clue" and "tells you exactly what broke". */
+function showInitError(message){
+  document.getElementById('loadingSpinner').style.display = 'none';
+  document.getElementById('loadingText').textContent = '❌ تعذّر تشغيل التطبيق';
+  const box = document.getElementById('loadingErrBox');
+  box.style.display = 'block';
+  box.textContent = message;
+}
+
+function initFirebase(){
+  // 1) Did one of the three <script src> CDN tags fail to load over the network?
+  if(window.__fbLoadErr){
+    showInitError(window.__fbLoadErr + ' — جرّب فتح الصفحة من شبكة إنترنت أخرى أو افتحها في متصفح Safari/Chrome مباشرة.');
+    return false;
+  }
+  // 2) Did the scripts load (no network error) but the global `firebase` object never appeared?
+  //    This happens if SPCK/the embedded webview blocks remote <script src> execution entirely.
+  if(typeof firebase === 'undefined'){
+    showInitError('لم يتم تحميل مكتبة Firebase. محرر SPCK أو المتصفح الحالي قد يمنع تشغيل سكريبتات خارجية (CDN) من ملف محلي. جرّب فتح هذا الملف مباشرة في Safari بدل معاينة SPCK الداخلية، أو استضفه على رابط (مثل Netlify) ثم افتحه.');
+    return false;
+  }
+  // 3) Firebase loaded — but initializeApp/auth/firestore could still throw (bad config, blocked domain, etc.)
+  try{
+    firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    return true;
+  } catch(e){
+    console.error('Firebase init threw:', e);
+    showInitError('فشل الاتصال بـ Firebase: ' + (e.message || e.code || 'خطأ غير معروف') + '. تحقق من بيانات الإعداد (firebaseConfig).');
+    return false;
+  }
+}
+
+const firebaseReady = initFirebase();
+
+if(firebaseReady){
+  attachAuthListener();
+} else {
+  // Safety net: even if init failed, never let the spinner spin forever with zero feedback.
+  console.warn('Firebase did not initialize — app halted on loading screen with diagnostic message.');
+}
+
+function showSyncPill(text, persistent){
+  const pill = document.getElementById('syncPill');
+  document.getElementById('syncPillText').textContent = text;
+  pill.classList.add('show');
+  if(!persistent) setTimeout(()=>pill.classList.remove('show'), 1800);
+}
+
+/* ══════════════════════════════════
+   AUTH STATE — single source of truth
+══════════════════════════════════ */
+function attachAuthListener(){
+  // If Firebase's own auth check never calls back (e.g. network reaches the CDN but not
+  // Firebase's auth servers — corporate proxy, ad-blocker, etc.), don't leave the spinner forever.
+  const authTimeout = setTimeout(()=>{
+    if(document.getElementById('loadingScreen').style.display !== 'none'){
+      showInitError('Firebase تحمّلت لكن لم يصل رد من خوادم تسجيل الدخول بعد 10 ثوانٍ. تحقق من اتصال الإنترنت، أو أن الدومين الحالي مُضاف في Firebase Console ← Authentication ← Settings ← Authorized domains.');
+    }
+  }, 10000);
+
+  auth.onAuthStateChanged(async (user) => {
+    clearTimeout(authTimeout);
+    document.getElementById('loadingScreen').style.display = 'none';
+    if(user){
+      currentUser = { uid: user.uid, name: user.displayName || user.email.split('@')[0], email: user.email };
+      document.getElementById('authScreen').classList.remove('active');
+      document.getElementById('appScreen').classList.add('active');
+      document.getElementById('navUserName').textContent = '👤 ' + currentUser.name;
+      await loadOrInitProfile();
+    } else {
+      currentUser = null;
+      profileCache = null;
+      if(firestoreUnsub){ firestoreUnsub(); firestoreUnsub = null; }
+      document.getElementById('appScreen').classList.remove('active');
+      document.getElementById('authScreen').classList.add('active');
+    }
+  }, (err) => {
+    clearTimeout(authTimeout);
+    console.error('onAuthStateChanged error:', err);
+    showInitError('خطأ في نظام تسجيل الدخول: ' + (err.message || err.code));
+  });
+}
+
+function userDocRef(){
+  return db.collection('users').doc(currentUser.uid);
+}
+
+/* Load profile from Firestore, or detect it doesn't exist yet (new user -> wizard).
+   Also attaches a live listener so data set on another device shows up here too. */
+async function loadOrInitProfile(){
+  try{
+    const snap = await userDocRef().get();
+    if(snap.exists){
+      profileCache = snap.data();
+    } else {
+      // Brand-new account: create the user shell doc, leave `profile` empty until wizard finishes
+      await userDocRef().set({
+        name: currentUser.name,
+        email: currentUser.email,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        profile: null
+      });
+      profileCache = { name: currentUser.name, email: currentUser.email, profile: null };
+    }
+  } catch(e){
+    console.error('Firestore load error:', e);
+    alert('تعذّر تحميل بياناتك. تحقق من اتصال الإنترنت ثم أعد فتح الصفحة.');
+    return;
+  }
+
+  // Live sync: if profile changes from another tab/device, refresh the UI automatically
+  if(firestoreUnsub) firestoreUnsub();
+  firestoreUnsub = userDocRef().onSnapshot((snap) => {
+    if(!snap.exists) return;
+    profileCache = snap.data();
+    if(profileCache.profile){
+      refreshDashboard();
+      if(document.getElementById('pagePlan').classList.contains('active')) renderPlanPage();
+      if(document.getElementById('pageStats').classList.contains('active')) renderStatsPage();
+    }
+  }, (err) => console.error('Live sync error:', err));
+
+  renderAppForProfile();
+}
+
+function renderAppForProfile(){
+  if(profileCache && profileCache.profile){
+    document.getElementById('wizardWrap').style.display = 'none';
+    document.getElementById('dashboardWrap').style.display = 'block';
+    refreshDashboard();
+    renderPlanPage();
+    renderStatsPage();
+  } else {
+    document.getElementById('wizardWrap').style.display = 'block';
+    document.getElementById('dashboardWrap').style.display = 'none';
+  }
+}
+
+function getProfile(){ return profileCache ? profileCache.profile : null; }
+
+/* Debounced write: avoids hammering Firestore on rapid taps (e.g. the +/- cigarette counter) */
+function saveProfile(profile){
+  profileCache.profile = profile;
+  showSyncPill('جاري الحفظ...', true);
+  clearTimeout(saveDebounce);
+  saveDebounce = setTimeout(async () => {
+    try{
+      await userDocRef().set({ profile }, { merge: true });
+      showSyncPill('✅ تم الحفظ في حسابك');
+    } catch(e){
+      console.error('Firestore save error:', e);
+      showSyncPill('❌ تعذّر الحفظ — تحقق من الإنترنت');
+    }
+  }, 500);
+}
+
+/* ══════════════════════════════════
+   AUTH ACTIONS
+══════════════════════════════════ */
+function switchAuthTab(tab){
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>{
+    t.classList.toggle('active', (tab==='login'&&i===0)||(tab==='register'&&i===1));
+  });
+  document.getElementById('loginForm').style.display = tab==='login'?'block':'none';
+  document.getElementById('registerForm').style.display = tab==='register'?'block':'none';
+}
+
+function showAuthErr(id, msg){
+  const el = document.getElementById(id);
+  el.textContent = msg; el.style.display='block';
+  setTimeout(()=>el.style.display='none', 5000);
+}
+
+function setAuthLoading(btnId, loading, label){
+  const btn = document.getElementById(btnId);
+  btn.disabled = loading;
+  btn.innerHTML = loading ? '<span class="auth-spinner"></span>' : label;
+}
+
+function firebaseErrMsg(code){
+  const map = {
+    'auth/email-already-in-use': 'هذا البريد مستخدم مسبقاً — جرّب تسجيل الدخول',
+    'auth/invalid-email': 'صيغة البريد الإلكتروني غير صحيحة',
+    'auth/weak-password': 'كلمة المرور ضعيفة — استخدم 6 أحرف على الأقل',
+    'auth/user-not-found': 'لا يوجد حساب بهذا البريد',
+    'auth/wrong-password': 'كلمة المرور غير صحيحة',
+    'auth/invalid-credential': 'البريد أو كلمة المرور غير صحيحة',
+    'auth/too-many-requests': 'محاولات كثيرة جداً — حاول بعد قليل',
+    'auth/popup-closed-by-user': 'تم إغلاق نافذة جوجل قبل إكمال الدخول',
+    'auth/unauthorized-domain': 'هذا الرابط غير مُصرّح له بدخول جوجل من إعدادات Firebase',
+    'auth/network-request-failed': 'تحقق من اتصالك بالإنترنت'
+  };
+  return map[code] || 'حدث خطأ غير متوقع، حاول مرة أخرى';
+}
+
+async function doRegister(){
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regUser').value.trim();
+  const pass = document.getElementById('regPass').value;
+  if(!name||!email||!pass){ showAuthErr('regErr','يرجى تعبئة جميع الحقول'); return; }
+  if(pass.length < 6){ showAuthErr('regErr','كلمة المرور 6 أحرف على الأقل'); return; }
+
+  setAuthLoading('regBtn', true);
+  try{
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    await cred.user.updateProfile({ displayName: name });
+    // onAuthStateChanged will fire and handle the rest (profile creation + UI)
+  } catch(e){
+    showAuthErr('regErr', firebaseErrMsg(e.code));
+  }
+  setAuthLoading('regBtn', false, 'إنشاء الحساب 🚀');
+}
+
+async function doLogin(){
+  const email = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  if(!email||!pass){ showAuthErr('loginErr','يرجى إدخال البريد وكلمة المرور'); return; }
+
+  setAuthLoading('loginBtn', true);
+  try{
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e){
+    showAuthErr('loginErr', firebaseErrMsg(e.code));
+  }
+  setAuthLoading('loginBtn', false, 'دخول ✨');
+}
+
+async function doGoogleAuth(){
+  const provider = new firebase.auth.GoogleAuthProvider();
+  try{
+    await auth.signInWithPopup(provider);
+  } catch(e){
+    const targetId = document.getElementById('loginForm').style.display !== 'none' ? 'loginErr' : 'regErr';
+    showAuthErr(targetId, firebaseErrMsg(e.code));
+  }
+}
+
+async function doForgotPassword(){
+  const email = document.getElementById('loginUser').value.trim();
+  if(!email){ showAuthErr('loginErr','اكتب بريدك الإلكتروني أولاً في الحقل أعلاه'); return; }
+  try{
+    await auth.sendPasswordResetEmail(email);
+    alert('✅ تم إرسال رابط إعادة تعيين كلمة المرور إلى ' + email);
+  } catch(e){
+    showAuthErr('loginErr', firebaseErrMsg(e.code));
+  }
+}
+
+function doLogout(){
+  if(!confirm('هل تريد تسجيل الخروج؟')) return;
+  auth.signOut();
+}
+
+/* ══════════════════════════════════
+   WIZARD
+══════════════════════════════════ */
+let wizardData = { cigType:null, method:null };
+let todayCigCount = 0;
+let cravingInterval = null;
+let breathInterval = null;
+let wizStep = 1;
+const totalSteps = 5;
+
+function wizNext(){
+  if(wizStep === 1){
+    const cpd = document.getElementById('w_cpd').value;
+    const years = document.getElementById('w_years').value;
+    if(!cpd||!wizardData.cigType){ alert('يرجى تعبئة الحقول واختيار نوع السيجارة'); return; }
+    wizardData.cpd = parseInt(cpd); wizardData.years = parseInt(years)||0;
+  }
+  if(wizStep === 2){
+    const price = document.getElementById('w_price').value;
+    if(!price){ alert('يرجى إدخال سعر العلبة'); return; }
+    wizardData.packPrice = parseFloat(price);
+    wizardData.cip = parseInt(document.getElementById('w_cip').value);
+  }
+  if(wizStep === 3 && !wizardData.method){ alert('يرجى اختيار طريقة الإقلاع'); return; }
+  if(wizStep === 4){
+    const checks = document.querySelectorAll('#motivationList input:checked');
+    wizardData.motivations = Array.from(checks).map(c=>c.value);
+  }
+  if(wizStep === 5){ finishWizard(); return; }
+  if(wizStep === 4) buildPlanSummary();
+  wizStep++;
+  updateWizardUI();
+}
+
+function wizBack(){
+  if(wizStep > 1){ wizStep--; updateWizardUI(); }
+}
+
+function updateWizardUI(){
+  for(let i=1;i<=totalSteps;i++){
+    const el = document.getElementById('ws'+i);
+    if(el) el.classList.toggle('active', i===wizStep);
+  }
+  document.getElementById('wizProg').style.width = (wizStep/totalSteps*100)+'%';
+  document.getElementById('wizStepNum').textContent = `خطوة ${wizStep} / ${totalSteps}`;
+  document.getElementById('wizBackBtn').style.display = wizStep>1?'block':'none';
+  document.getElementById('wizNextBtn').textContent = wizStep===totalSteps?'🚀 ابدأ الرحلة!':'التالي ▶';
+}
+
+function selectChoice(btn, key, val){
+  btn.closest('.choice-grid, div').querySelectorAll('.choice-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  wizardData[key] = val;
+  if(key==='method') recalcSavings();
+}
+
+function recalcSavings(){
+  const cpd = parseInt(document.getElementById('w_cpd').value)||0;
+  const price = parseFloat(document.getElementById('w_price').value)||0;
+  const cip = parseInt(document.getElementById('w_cip').value)||20;
+  const daily = (cpd * price / cip).toFixed(2);
+  const yearly = (daily * 365).toFixed(0);
+  document.getElementById('dailySave').textContent = daily + ' $';
+  document.getElementById('yearlySave').textContent = yearly + ' $';
+}
+document.getElementById('w_cpd')?.addEventListener('input', recalcSavings);
+document.getElementById('w_price')?.addEventListener('input', recalcSavings);
+
+function buildPlanSummary(){
+  const cpd = wizardData.cpd;
+  const plan = buildGradualPlan(cpd, wizardData.method);
+  const pps = (wizardData.packPrice / wizardData.cip * cpd * 365).toFixed(0);
+  document.getElementById('planSummary').innerHTML = `
+    <div style="background:var(--green-lt);border-radius:12px;padding:14px;">
+      <div style="font-weight:800;margin-bottom:4px;">🚬 نقطة البداية: ${cpd} سيجارة/يوم</div>
+      <div style="font-size:.85rem;color:var(--gray);">الهدف: صفر سيجارة خلال ${plan.weeks} أسبوع</div>
+    </div>
+    <div style="background:var(--gold-lt);border-radius:12px;padding:14px;">
+      <div style="font-weight:800;margin-bottom:4px;">💵 ستوفر سنوياً: ${pps} وحدة</div>
+      <div style="font-size:.85rem;color:var(--gray);">ستُستعاد صحتك تدريجياً مع كل أسبوع</div>
+    </div>
+    <div style="background:var(--blue-lt);border-radius:12px;padding:14px;">
+      <div style="font-weight:800;margin-bottom:4px;">🎯 خطة: ${methodLabel(wizardData.method)}</div>
+      <div style="font-size:.85rem;color:var(--gray);">سيُرشدك المدرب الذكي خطوة بخطوة</div>
+    </div>
+  `;
+}
+
+function methodLabel(m){
+  return {gradual4:'تدريجي بطيء 8 أسابيع',gradual2:'تدريجي متوسط 4 أسابيع',fast:'سريع أسبوعان',cold:'توقف فوري'}[m]||m;
+}
+
+function buildGradualPlan(cpd, method){
+  let weeks = [];
+  if(method === 'cold'){
+    weeks = [{ week:0, cigs:0, label:'اليوم الأول' }];
+    return { weeks, weeks:1 };
+  }
+  const configs = {
+    gradual4:[0.75,0.50,0.25,0.10,0.05,0.02,0.01,0],
+    gradual2:[0.50,0.25,0.10,0],
+    fast:[0.50,0.10,0]
+  };
+  const reductions = configs[method] || configs.gradual2;
+  weeks = reductions.map((r,i)=>({ week:i+1, cigs:Math.max(0,Math.round(cpd*r)) }));
+  return { weeks, weeks: weeks.length };
+}
+
+async function finishWizard(){
+  const btn = document.getElementById('wizNextBtn');
+  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
+
+  const plan = buildGradualPlan(wizardData.cpd, wizardData.method);
+  const profile = {
+    ...wizardData,
+    plan: plan.weeks,
+    startDate: new Date().toISOString(),
+    logs: {},
+    currentPlanWeek: 1
+  };
+
+  try{
+    await userDocRef().set({ profile }, { merge: true });
+    profileCache.profile = profile; // update local cache immediately so UI doesn't wait on the listener
+    document.getElementById('wizardWrap').style.display='none';
+    document.getElementById('dashboardWrap').style.display='block';
+    refreshDashboard();
+    renderPlanPage();
+    renderStatsPage();
+  } catch(e){
+    console.error('Failed to save wizard profile:', e);
+    alert('تعذّر حفظ خطتك. تحقق من اتصال الإنترنت وحاول مجدداً.');
+    btn.disabled = false; btn.textContent = '🚀 ابدأ الرحلة!';
+  }
+}
+
+/* ══════════════════════════════════
+   DASHBOARD
+══════════════════════════════════ */
+function refreshDashboard(){
+  const p = getProfile(); if(!p) return;
+  const startDate = new Date(p.startDate);
+  const now = new Date();
+  const diffDays = Math.max(0, Math.floor((now - startDate)/(1000*60*60*24)));
+  const totalCigTarget = p.cpd;
+
+  // Determine current week's target
+  const weekIdx = Math.min(diffDays < 7 ? 0 : Math.floor(diffDays/7), (p.plan||[]).length-1);
+  const currentWeek = (p.plan||[])[weekIdx] || { cigs: 0 };
+  const todayGoal = currentWeek.cigs ?? 0;
+  document.getElementById('todayGoalBadge').textContent = todayGoal + ' سيجارة';
+
+  // Days
+  document.getElementById('htDays').textContent = diffDays;
+
+  // Phase
+  const phaseNames = ['البداية 🌱','تقليل أولي 💪','منتصف الطريق 🏃','مشارف النهاية ⚡','التحرر الكامل 🌟'];
+  const phaseIdx = Math.min(weekIdx, phaseNames.length-1);
+  document.getElementById('htPhase').textContent = phaseNames[phaseIdx];
+
+  // Money saved (based on logs vs original)
+  let totalSavedCigs = 0;
+  const logs = p.logs || {};
+  Object.values(logs).forEach(log => {
+    const dayGoal = log.goal ?? totalCigTarget;
+    totalSavedCigs += Math.max(0, totalCigTarget - (log.count||0));
+  });
+  // Also count unlogged days
+  const pricePerCig = (p.packPrice||5)/(p.cip||20);
+  const moneySaved = (totalSavedCigs * pricePerCig).toFixed(1);
+  const hoursSaved = (totalSavedCigs * 11/60).toFixed(1);
+
+  document.getElementById('htSaved').textContent = moneySaved;
+  document.getElementById('htAvoided').textContent = totalSavedCigs;
+  document.getElementById('htHours').textContent = hoursSaved;
+
+  // Today's count from log
+  const todayKey = new Date().toISOString().split('T')[0];
+  todayCigCount = logs[todayKey]?.count || 0;
+  document.getElementById('todayCigNum').textContent = todayCigCount;
+  updateTodayStatus(todayCigCount, todayGoal);
+
+  // Weekly chart
+  renderWeekChart(p);
+}
+
+function updateTodayStatus(count, goal){
+  const el = document.getElementById('todayStatus');
+  if(count === 0){ el.textContent='🎉 رائع! لا سجائر اليوم'; el.style.color='var(--green)'; }
+  else if(count <= goal){ el.textContent=`✅ أنت في الهدف (${count}/${goal})`; el.style.color='var(--green)'; }
+  else{ el.textContent=`⚠️ تجاوزت الهدف (${count} > ${goal})`; el.style.color='var(--red)'; }
+}
+
+function adjustCig(delta){
+  todayCigCount = Math.max(0, todayCigCount + delta);
+  document.getElementById('todayCigNum').textContent = todayCigCount;
+  const p = getProfile();
+  const weekIdx = getWeekIdx(p);
+  const goal = (p.plan||[])[weekIdx]?.cigs ?? 0;
+  updateTodayStatus(todayCigCount, goal);
+}
+
+function getWeekIdx(p){
+  const startDate = new Date(p.startDate);
+  const diffDays = Math.floor((new Date()-startDate)/(1000*60*60*24));
+  return Math.min(diffDays < 7 ? 0 : Math.floor(diffDays/7), (p.plan||[]).length-1);
+}
+
+function logToday(){
+  const p = getProfile();
+  const todayKey = new Date().toISOString().split('T')[0];
+  const weekIdx = getWeekIdx(p);
+  const goal = (p.plan||[])[weekIdx]?.cigs ?? 0;
+  if(!p.logs) p.logs = {};
+  p.logs[todayKey] = { count: todayCigCount, goal };
+  saveProfile(p);
+  refreshDashboard();
+  const msg = todayCigCount <= goal ? '✅ تم الحفظ! أحسنت!' : '⚠️ تم الحفظ. غداً أفضل إن شاء الله!';
+  alert(msg);
+}
+
+function renderWeekChart(p){
+  const wrap = document.getElementById('weekChart');
+  const logs = p.logs || {};
+  const today = new Date();
+  const days = [];
+  for(let i=6;i>=0;i--){
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    const key = d.toISOString().split('T')[0];
+    const log = logs[key];
+    const dayName = ['أحد','اثن','ثلا','أرب','خمي','جمع','سبت'][d.getDay()];
+    days.push({ key, log, dayName });
+  }
+  const maxCig = p.cpd || 20;
+  wrap.innerHTML = days.map(d=>{
+    const count = d.log?.count ?? null;
+    const goal = d.log?.goal ?? null;
+    const heightPct = count !== null ? Math.max(5, (count/maxCig)*100) : 0;
+    const cls = count === null ? '' : count <= (goal??0) ? 'on-target' : 'over-limit';
+    return `<div class="chart-bar-wrap">
+      <div class="chart-bar ${cls}" style="height:${heightPct}%;background:${count===null?'#e5e7eb':''}" title="${count??'لم يُسجّل'}"></div>
+      <div class="chart-day">${d.dayName}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════
+   PLAN PAGE
+══════════════════════════════════ */
+function renderPlanPage(){
+  const p = getProfile(); if(!p) return;
+  const plan = p.plan || [];
+  const startDate = new Date(p.startDate);
+  const today = new Date();
+  const totalDays = Math.floor((today-startDate)/(1000*60*60*24));
+  const currentWeekIdx = Math.min(Math.floor(totalDays/7), plan.length-1);
+
+  const weekTips = [
+    'ركّز على شرب الماء وتغيير الروتين اليومي.',
+    'حدد أوقات الإغراء وتجنب المحفزات.',
+    'ابدأ بممارسة المشي 15 دقيقة يومياً.',
+    'استبدل وقت التدخين بقراءة أو تأمل.',
+    'أنت في المنتصف — الجسم يتعافى الآن.',
+    'لا تفكر بالنهاية — فكر باليوم فقط.',
+    'الصعوبات الآن تعني النجاح قريباً.',
+    '🏆 أنت على وشك التحرر الكامل!'
+  ];
+
+  let html = '<div class="plan-container">';
+  plan.forEach((week, idx)=>{
+    const weekStartDay = idx * 7;
+    const isDone = currentWeekIdx > idx;
+    const isCurrent = currentWeekIdx === idx;
+    const statusClass = isDone?'done-week':isCurrent?'current-week':'';
+    const badgeClass = isDone?'done':isCurrent?'current':'future';
+    const badgeText = isDone?'✅ منتهي':isCurrent?'🟢 الآن':'⏳ قادم';
+    html += `
+    <div style="position:relative;padding-right:16px;border-right:3px solid ${isDone?'var(--green)':isCurrent?'var(--green)':'#e5e7eb'};margin-right:12px;padding-bottom:4px;">
+      <div style="width:18px;height:18px;border-radius:50%;background:${isDone||isCurrent?'var(--green)':'#e5e7eb'};border:3px solid ${isDone?'var(--green-dk)':isCurrent?'var(--green)':'#d1d5db'};position:absolute;right:-10px;top:16px;${isCurrent?'box-shadow:0 0 0 4px rgba(29,185,84,.2);animation:pulse-dot 1.5s infinite':''}"></div>
+      <div class="plan-week-card ${statusClass}">
+        <div class="pwc-header">
+          <div class="pwc-title">الأسبوع ${idx+1} — يوم ${weekStartDay+1}-${weekStartDay+7}</div>
+          <span class="pwc-badge ${badgeClass}">${badgeText}</span>
+        </div>
+        <div class="pwc-cigs">${week.cigs} <span>سيجارة / يوم</span></div>
+        <div class="pwc-tip">💡 ${weekTips[idx] || 'استمر، أنت رائع!'}</div>
+        ${isCurrent ? renderDailyLog(p) : ''}
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('planTimeline').innerHTML = html;
+}
+
+function renderDailyLog(p){
+  const todayKey = new Date().toISOString().split('T')[0];
+  const logged = p.logs?.[todayKey];
+  if(logged) return `<div style="margin-top:10px;padding:10px;background:rgba(29,185,84,.1);border-radius:10px;font-size:.85rem;color:var(--green-dk);">✅ سجّلت اليوم: ${logged.count} سيجارة</div>`;
+  return `<div class="daily-log"><div class="daily-log-title">سجّل يومك:</div>
+  <div class="cig-counter">
+    <button class="cig-counter-btn" onclick="adjustCig(-1);document.getElementById('planCigNum').textContent=todayCigCount">−</button>
+    <div><div class="cig-count-num" id="planCigNum">${todayCigCount}</div><div class="cig-count-label">سيجارة اليوم</div></div>
+    <button class="cig-counter-btn" onclick="adjustCig(1);document.getElementById('planCigNum').textContent=todayCigCount">+</button>
+  </div>
+  <button class="log-btn" onclick="logToday();renderPlanPage()">✅ حفظ</button></div>`;
+}
+
+/* ══════════════════════════════════
+   STATS PAGE
+══════════════════════════════════ */
+const BADGES = [
+  {icon:'⚡',name:'الشرارة الأولى',desc:'أول يوم',days:1,money:0},
+  {icon:'🌅',name:'أسبوع كامل',desc:'7 أيام',days:7,money:0},
+  {icon:'🌿',name:'أسبوعان',desc:'14 يوماً',days:14,money:0},
+  {icon:'🌙',name:'الشهر الأول',desc:'30 يوماً',days:30,money:0},
+  {icon:'💪',name:'المحارب',desc:'60 يوماً',days:60,money:0},
+  {icon:'🏅',name:'المئة',desc:'100 يوم',days:100,money:0},
+  {icon:'🌟',name:'نصف عام',desc:'180 يوماً',days:180,money:0},
+  {icon:'👑',name:'عام كامل',desc:'365 يوماً',days:365,money:0},
+];
+
+const HEALTH_MILESTONES = [
+  {icon:'❤️',title:'ينتظم ضربات قلبك',desc:'خلال 20 دقيقة من التوقف، تعود ضربات القلب لمعدلها الطبيعي.',hours:0.33},
+  {icon:'🩸',title:'ثاني أكسيد الكربون يختفي',desc:'خلال 12 ساعة، ينخفض ثاني أكسيد الكربون في الدم إلى الصفر.',hours:12},
+  {icon:'🫁',title:'تتحسن أهداب الرئة',desc:'بعد 48 ساعة، تبدأ أهداب الرئة بالتجدد وتنظيف المسالك.',hours:48},
+  {icon:'👃',title:'يتحسن الشم والتذوق',desc:'بعد 48 ساعة، تعود حاسة الشم والتذوق تدريجياً.',hours:48},
+  {icon:'💨',title:'أسهل في التنفس',desc:'بعد 72 ساعة، تبدأ القصبة الهوائية بالاسترخاء.',hours:72},
+  {icon:'🏃',title:'لياقتك ترتفع',desc:'بعد أسبوعين، يتحسن الدوران ويزيد أداء الرئتين.',hours:336},
+  {icon:'😷',title:'أقل بردة وإنفلونزا',desc:'بعد شهر، تتحسن مناعتك.',hours:720},
+  {icon:'🫀',title:'خطر السكتة ينخفض 50%',desc:'بعد سنة، يعود مستوى خطر أمراض القلب لنصف ما كان.',hours:8760},
+];
+
+function renderStatsPage(){
+  const p = getProfile(); if(!p) return;
+  const startDate = new Date(p.startDate);
+  const diffMs = new Date() - startDate;
+  const diffDays = Math.max(0, Math.floor(diffMs/(1000*60*60*24)));
+  const diffHours = diffMs/(1000*60*60);
+
+  const logs = p.logs||{};
+  let totalSavedCigs = 0;
+  Object.values(logs).forEach(l=>totalSavedCigs+=Math.max(0,(p.cpd||20)-(l.count||0)));
+  const pricePerCig = (p.packPrice||5)/(p.cip||20);
+  const moneySaved = (totalSavedCigs*pricePerCig).toFixed(1);
+
+  document.getElementById('st_days').textContent = diffDays;
+  document.getElementById('st_money').textContent = moneySaved;
+  document.getElementById('st_avoided').textContent = totalSavedCigs;
+  document.getElementById('st_hours').textContent = (totalSavedCigs*11/60).toFixed(1);
+
+  // Badges
+  document.getElementById('badgesGrid').innerHTML = BADGES.map(b=>`
+    <div class="badge ${diffDays>=b.days?'earned':''}">
+      <div class="b-icon">${b.icon}</div>
+      <div class="b-name">${b.name}</div>
+      <div class="b-desc">${b.desc}</div>
+    </div>`).join('');
+
+  // Health
+  document.getElementById('healthItems').innerHTML = HEALTH_MILESTONES.map(h=>{
+    const achieved = diffHours >= h.hours;
+    return `<div class="health-item">
+      <div class="hi-icon">${h.icon}</div>
+      <div>
+        <div class="hi-title">${h.title}</div>
+        <div class="hi-desc">${h.desc}</div>
+        <div class="hi-status ${achieved?'achieved':'pending'}">${achieved?'✅ تحقق!':'⏳ قادم'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════
+   AI COACH CHAT
+══════════════════════════════════ */
+let chatHistory = [];
+
+async function sendChat(){
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if(!msg) return;
+  input.value = '';
+  appendChat(msg, 'user');
+  chatHistory.push({ role:'user', content: msg });
+  await aiReply();
+}
+
+function quickChat(msg){
+  document.getElementById('chatInput').value = msg;
+  sendChat();
+}
+
+function appendChat(text, role){
+  const wrap = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'chat-bubble ' + role;
+  div.textContent = text;
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+function showTyping(){
+  const wrap = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'typing-ind'; div.id = 'typingInd';
+  div.innerHTML = '<span></span><span></span><span></span>';
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+function removeTyping(){ document.getElementById('typingInd')?.remove(); }
+
+async function aiReply(){
+  const p = getProfile();
+  const startDate = p ? new Date(p.startDate) : new Date();
+  const days = Math.floor((new Date()-startDate)/(1000*60*60*24));
+  const weekIdx = p ? getWeekIdx(p) : 0;
+  const currentTarget = p ? ((p.plan||[])[weekIdx]?.cigs ?? 0) : 0;
+
+  const systemPrompt = `أنت مدرب ذكي ومتعاطف متخصص في مساعدة الناس على الإقلاع عن التدخين بطريقة تدريجية علمية. 
+اسم المستخدم: ${currentUser?.name || 'صديق'}.
+حالته الحالية: ${days} يوم في رحلة الإقلاع. هدف هذا الأسبوع: ${currentTarget} سيجارة/يوم.
+دوافعه: ${p?.motivations?.join('، ') || 'غير محدد'}.
+تحدث بالعربية باختصار وعاطفة حقيقية. لا تكن آلياً. ردودك من 3-6 جمل فقط. استخدم الإيموجي باعتدال.`;
+
+  showTyping();
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:1000,
+        system: systemPrompt,
+        messages: chatHistory
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || 'حدث خطأ. حاول مرة أخرى.';
+    removeTyping();
+    appendChat(reply, 'ai');
+    chatHistory.push({ role:'assistant', content: reply });
+  } catch(e){
+    removeTyping();
+    appendChat('❌ تعذّر الاتصال. تحقق من الإنترنت.','ai');
+  }
+}
+
+/* ══════════════════════════════════
+   CRAVING SOS
+══════════════════════════════════ */
+function startCravingTimer(){
+  document.getElementById('cravingTimerWrap').style.display = 'block';
+  document.querySelector('.sos-btn').style.display = 'none';
+  let secs = 300; // 5 minutes
+  const ring = document.getElementById('ringProg');
+  const circumference = 314;
+  ring.style.strokeDashoffset = 0;
+
+  if(cravingInterval) clearInterval(cravingInterval);
+  cravingInterval = setInterval(()=>{
+    secs--;
+    const mm = String(Math.floor(secs/60)).padStart(2,'0');
+    const ss = String(secs%60).padStart(2,'0');
+    document.getElementById('ringText').textContent = mm+':'+ss;
+    const offset = circumference - (secs/300)*circumference;
+    ring.style.strokeDashoffset = offset;
+    if(secs <= 0){
+      clearInterval(cravingInterval);
+      document.getElementById('ringText').textContent = '🎉';
+      document.getElementById('cravingTimerWrap').querySelector('.breath-label').textContent = 'أحسنت! تجاوزت الرغبة! 🏆';
+    }
+  }, 1000);
+
+  // Breathing exercise
+  startBreathing();
+}
+
+function startBreathing(){
+  const circle = document.getElementById('breathCircle');
+  const label = document.getElementById('breathLabel');
+  let phase = 0;
+  const phases = [
+    {text:'شهيق',label:'شهيق ببطء... (4 ثوانٍ)',cls:'inhale',dur:4000},
+    {text:'توقف',label:'احبس النفس... (4 ثوانٍ)',cls:'',dur:4000},
+    {text:'زفير',label:'زفير ببطء... (6 ثوانٍ)',cls:'exhale',dur:6000},
+  ];
+  if(breathInterval) clearInterval(breathInterval);
+  function nextPhase(){
+    const p = phases[phase % 3];
+    circle.textContent = p.text;
+    label.textContent = p.label;
+    circle.className = 'breath-circle ' + p.cls;
+    phase++;
+    breathInterval = setTimeout(nextPhase, p.dur);
+  }
+  nextPhase();
+}
+
+/* ══════════════════════════════════
+   NAVIGATION
+══════════════════════════════════ */
+function goPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.bn-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page'+name.charAt(0).toUpperCase()+name.slice(1)).classList.add('active');
+  document.getElementById('bn_'+name).classList.add('active');
+  if(name==='plan') renderPlanPage();
+  if(name==='stats') renderStatsPage();
+}
+
+function goToSOS(){
+  goPage('coach');
+  setTimeout(()=>document.getElementById('sosCard').scrollIntoView({behavior:'smooth'}), 100);
+}
+</script>
+</body>
+</html>
